@@ -11,3 +11,5 @@ aoc download -d $DAY --input-file inputs/day$DAY.txt --puzzle-file puzzles/day$D
 cp -n template.rs src/day$DAY.rs
 
 code puzzles/day$DAY.md src/bin/day$DAY.rs inputs/day$DAY.txt
+
+echo pub mod day$DAY\; >>src/lib.rs
