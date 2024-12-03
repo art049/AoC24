@@ -9,7 +9,6 @@ pub fn part2(input: &str) -> u64 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::get_day_input;
 
     #[test]
     fn test_part1() {
@@ -29,12 +28,12 @@ mod test {
 
     #[test]
     fn run_part1() {
-        let input = get_day_input!();
+        let input = crate::utils::get_day_input!();
         println!("Part 1: {}", part1(&input));
     }
     #[test]
     fn run_part2() {
-        let input = get_day_input!();
+        let input = crate::utils::get_day_input!();
         println!("Part 2: {}", part2(&input));
     }
 }

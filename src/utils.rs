@@ -13,6 +13,7 @@ macro_rules! get_day_input {
     }};
 }
 
+#[cfg(test)]
 pub use get_day_input;
 
 #[macro_export]
