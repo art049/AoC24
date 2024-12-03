@@ -8,6 +8,7 @@ fn build_lut(pattern: &[u8]) -> [u8; 256] {
     lut
 }
 
+#[inline(always)]
 unsafe fn find_pattern_simd_with_lut(
     haystack: &[u8],
     start: usize,
