@@ -1,3 +1,5 @@
+use std::arch::x86_64::*;
+
 pub fn part1(input: &str) -> u64 {
     let mut sum = 0;
     let bytes = input.as_bytes();
@@ -38,41 +40,88 @@ pub fn part1(input: &str) -> u64 {
     sum
 }
 
+#[inline(always)]
+unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Option<usize> {
+    if pattern.is_empty() || haystack.len() < start + pattern.len() {
+        return None;
+    }
+
+    let pattern_len = pattern.len();
+    let haystack_len = haystack.len();
+
+    // Load the first byte of the pattern into a SIMD register
+    let first_byte = _mm_set1_epi8(pattern[0] as i8);
+
+    // Iterate over the haystack in chunks of 16 bytes
+    let mut i = start;
+    while i + 16 <= haystack_len {
+        let chunk = _mm_loadu_si128(haystack.as_ptr().add(i) as *const __m128i);
+
+        // Compare the chunk with the first byte of the pattern
+        let matches = _mm_cmpeq_epi8(chunk, first_byte);
+
+        // Create a mask of matched positions
+        let mask = _mm_movemask_epi8(matches);
+
+        // Check each matching position
+        if mask != 0 {
+            for offset in 0..16 {
+                if mask & (1 << offset) != 0 {
+                    // Check the rest of the pattern
+                    let pos = i + offset;
+                    if pos + pattern_len <= haystack_len
+                        && &haystack[pos..pos + pattern_len] == pattern
+                    {
+                        return Some(pos);
+                    }
+                }
+            }
+        }
+
+        i += 16;
+    }
+
+    // Handle the tail of the haystack
+    while i + pattern_len <= haystack_len {
+        if &haystack[i..i + pattern_len] == pattern {
+            return Some(i);
+        }
+        i += 1;
+    }
+
+    None
+}
+
 pub fn part2(input: &str) -> u64 {
     let mut sum = 0;
     let bytes = input.as_bytes();
     let mut start = 0;
 
-    loop {
-        // Find the next occurrence of "don't()"
-        let mut end = bytes.len();
-        for i in start..bytes.len() - 6 {
-            if &bytes[i..i + 7] == b"don't()" {
-                end = i;
+    let dont_pattern = b"don't()";
+    let do_pattern = b"do()";
+
+    unsafe {
+        while start < bytes.len() {
+            // Find "don't()" using SIMD
+            let end = find_pattern_simd(bytes, start, dont_pattern).unwrap_or(bytes.len());
+
+            // Sum the part before "don't()"
+            sum += part1(std::str::from_utf8_unchecked(&bytes[start..end]));
+
+            // If no more "don't()", we are done
+            if end == bytes.len() {
                 break;
             }
-        }
 
-        // Sum the part before "don't()"
-        sum += part1(unsafe { std::str::from_utf8_unchecked(&bytes[start..end]) });
+            // Find "do()" using SIMD
+            start = find_pattern_simd(bytes, end + dont_pattern.len(), do_pattern)
+                .map(|i| i + do_pattern.len())
+                .unwrap_or(bytes.len());
 
-        // If no more "don't()", we are done
-        if end == bytes.len() {
-            break;
-        }
-
-        // Find the next occurrence of "do()"
-        start = bytes.len();
-        for i in end..bytes.len() - 3 {
-            if &bytes[i..i + 4] == b"do()" {
-                start = i + 4; // Move past "do()"
+            // If no more "do()", we are done
+            if start >= bytes.len() {
                 break;
             }
-        }
-
-        // If no more "do()", we are done
-        if start >= bytes.len() {
-            break;
         }
     }
 
@@ -90,6 +139,15 @@ mod test {
         "};
         let expected = 161;
         assert_eq!(part1(&input), expected);
+    }
+
+    #[test]
+    fn test_find_pattern_simd_basic() {
+        unsafe {
+            let haystack = b"abcdefg don't() some text do() and more";
+            assert_eq!(find_pattern_simd(haystack, 0, b"don't()"), Some(8));
+            assert_eq!(find_pattern_simd(haystack, 0, b"do()"), Some(26));
+        }
     }
 
     #[test]
