@@ -1,8 +1,16 @@
 [package]
 name = "aoc24"
 version = "0.1.0"
-authors = ["Arthur Pastel <arthur.pastel@gmail.com>"]
+edition = "2021"
+authors = ["Arthur Pastel <arthur@codspeed.io>"]
 
 
 [dev-dependencies]
+criterion = { version = "2.7.2", package = "codspeed-criterion-compat", default-features = false }
 indoc = "2.0.5"
+paste = "1.0.15"
+
+
+[[bench]]
+name = "bench_days"
+harness = false
