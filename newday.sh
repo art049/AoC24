@@ -9,3 +9,4 @@ aoc download -d $DAY --input-file inputs/day$DAY.txt --puzzle-file puzzles/day$D
 cp -n template.rs src/day$DAY.rs
 
 echo pub mod day$DAY\; >>src/lib.rs
+sed -i "s/\(benches!(.*\));/\1, $DAY);/" ./benches/bench_days.rs
