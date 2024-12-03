@@ -1,6 +1,5 @@
 use std::arch::x86_64::*;
 
-#[inline(always)]
 unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Option<usize> {
     if pattern.is_empty() || haystack.len() < start + pattern.len() {
         return None;
@@ -8,40 +7,40 @@ unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Op
 
     let pattern_len = pattern.len();
     let haystack_len = haystack.len();
-
-    // Load the first byte of the pattern into a SIMD register
     let first_byte = _mm_set1_epi8(pattern[0] as i8);
 
-    // Iterate over the haystack in chunks of 16 bytes
     let mut i = start;
+
     while i + 16 <= haystack_len {
         let chunk = _mm_loadu_si128(haystack.as_ptr().add(i) as *const __m128i);
 
-        // Compare the chunk with the first byte of the pattern
+        // Compare first byte
         let matches = _mm_cmpeq_epi8(chunk, first_byte);
-
-        // Create a mask of matched positions
         let mask = _mm_movemask_epi8(matches);
 
-        // Check each matching position
+        // Process all matches in this chunk
         if mask != 0 {
-            for offset in 0..16 {
-                if mask & (1 << offset) != 0 {
-                    // Check the rest of the pattern
-                    let pos = i + offset;
-                    if pos + pattern_len <= haystack_len
-                        && &haystack[pos..pos + pattern_len] == pattern
-                    {
-                        return Some(pos);
-                    }
+            let mut match_mask = mask;
+            while match_mask != 0 {
+                let offset = match_mask.trailing_zeros() as usize;
+                let pos = i + offset;
+
+                // Check full pattern match
+                if pos + pattern_len <= haystack_len
+                    && haystack[pos..pos + pattern_len] == pattern[..]
+                {
+                    return Some(pos);
                 }
+
+                // Clear the matched bit
+                match_mask &= match_mask - 1;
             }
         }
 
         i += 16;
     }
 
-    // Handle the tail of the haystack
+    // Process the tail using smaller SIMD chunks or scalar
     while i + pattern_len <= haystack_len {
         if &haystack[i..i + pattern_len] == pattern {
             return Some(i);
