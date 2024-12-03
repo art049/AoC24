@@ -9,26 +9,31 @@ unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Op
     let pattern_len = pattern.len();
     let haystack_len = haystack.len();
 
-    // Load the first byte of the pattern into a SIMD register
-    let first_byte = _mm_set1_epi8(pattern[0] as i8);
+    // Load the first byte of the pattern into an AVX2 register
+    let first_byte = _mm256_set1_epi8(pattern[0] as i8);
 
-    // Iterate over the haystack in chunks of 16 bytes
     let mut i = start;
-    while i + 16 <= haystack_len {
-        let chunk = _mm_loadu_si128(haystack.as_ptr().add(i) as *const __m128i);
+
+    while i + 32 <= haystack_len {
+        // Prefetch data to L1 cache to reduce memory latency
+        _mm_prefetch(haystack.as_ptr().add(i + 64) as *const i8, _MM_HINT_T0);
+
+        // Load 32 bytes from haystack into an AVX2 register
+        let chunk = _mm256_loadu_si256(haystack.as_ptr().add(i) as *const __m256i);
 
         // Compare the chunk with the first byte of the pattern
-        let matches = _mm_cmpeq_epi8(chunk, first_byte);
+        let matches = _mm256_cmpeq_epi8(chunk, first_byte);
 
         // Create a mask of matched positions
-        let mask = _mm_movemask_epi8(matches);
+        let mask = _mm256_movemask_epi8(matches);
 
-        // Check each matching position
+        // Check each matching position in the chunk
         if mask != 0 {
-            for offset in 0..16 {
+            for offset in 0..32 {
                 if mask & (1 << offset) != 0 {
-                    // Check the rest of the pattern
                     let pos = i + offset;
+
+                    // Check the rest of the pattern at this position
                     if pos + pattern_len <= haystack_len
                         && &haystack[pos..pos + pattern_len] == pattern
                     {
@@ -38,10 +43,10 @@ unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Op
             }
         }
 
-        i += 16;
+        i += 32; // Move to the next chunk
     }
 
-    // Handle the tail of the haystack
+    // Handle the tail of the haystack where < 32 bytes remain
     while i + pattern_len <= haystack_len {
         if &haystack[i..i + pattern_len] == pattern {
             return Some(i);
