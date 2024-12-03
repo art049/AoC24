@@ -1,45 +1,5 @@
 use std::arch::x86_64::*;
 
-pub fn part1(input: &str) -> u64 {
-    let mut sum = 0;
-    let bytes = input.as_bytes();
-    let mut i = 0;
-
-    while i < bytes.len() {
-        if bytes.get(i..i + 4) == Some(b"mul(") {
-            i += 4;
-            let mut a = 0;
-            while let Some(&b) = bytes.get(i) {
-                if b.is_ascii_digit() {
-                    a = a * 10 + (b - b'0') as u64;
-                    i += 1;
-                } else {
-                    break;
-                }
-            }
-            if bytes.get(i) == Some(&b',') {
-                i += 1;
-                let mut b = 0;
-                while let Some(&c) = bytes.get(i) {
-                    if c.is_ascii_digit() {
-                        b = b * 10 + (c - b'0') as u64;
-                        i += 1;
-                    } else {
-                        break;
-                    }
-                }
-                if bytes.get(i) == Some(&b')') {
-                    i += 1;
-                    sum += a * b;
-                }
-            }
-        } else {
-            i += 1;
-        }
-    }
-    sum
-}
-
 #[inline(always)]
 unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Option<usize> {
     if pattern.is_empty() || haystack.len() < start + pattern.len() {
@@ -90,6 +50,60 @@ unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Op
     }
 
     None
+}
+
+pub fn part1(input: &str) -> u64 {
+    let mut sum = 0;
+    let bytes = input.as_bytes();
+    let mut i = 0;
+
+    let mul_pattern = b"mul(";
+
+    unsafe {
+        while i < bytes.len() {
+            // Find "mul(" using SIMD
+            i = find_pattern_simd(bytes, i, mul_pattern).unwrap_or(bytes.len());
+
+            if i == bytes.len() {
+                break;
+            }
+
+            i += mul_pattern.len(); // Move past "mul("
+
+            // Parse the first number
+            let mut a = 0;
+            while let Some(&b) = bytes.get(i) {
+                if b.is_ascii_digit() {
+                    a = a * 10 + (b - b'0') as u64;
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+
+            if bytes.get(i) == Some(&b',') {
+                i += 1;
+
+                // Parse the second number
+                let mut b = 0;
+                while let Some(&c) = bytes.get(i) {
+                    if c.is_ascii_digit() {
+                        b = b * 10 + (c - b'0') as u64;
+                        i += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                if bytes.get(i) == Some(&b')') {
+                    i += 1;
+                    sum += a * b;
+                }
+            }
+        }
+    }
+
+    sum
 }
 
 pub fn part2(input: &str) -> u64 {
