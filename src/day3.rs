@@ -40,28 +40,42 @@ pub fn part1(input: &str) -> u64 {
 
 pub fn part2(input: &str) -> u64 {
     let mut sum = 0;
+    let bytes = input.as_bytes();
     let mut start = 0;
-    let mut end;
+
     loop {
-        end = input[start..]
-            .find("don't()")
-            .map(|i| i + start)
-            .unwrap_or(input.len());
+        // Find the next occurrence of "don't()"
+        let mut end = bytes.len();
+        for i in start..bytes.len() - 6 {
+            if &bytes[i..i + 7] == b"don't()" {
+                end = i;
+                break;
+            }
+        }
 
-        sum += part1(&input[start..end]);
+        // Sum the part before "don't()"
+        sum += part1(unsafe { std::str::from_utf8_unchecked(&bytes[start..end]) });
 
-        if end >= input.len() {
+        // If no more "don't()", we are done
+        if end == bytes.len() {
             break;
         }
-        start = input[end..]
-            .find("do()")
-            .map(|i| i + end)
-            .unwrap_or(input.len());
 
-        if start >= input.len() {
+        // Find the next occurrence of "do()"
+        start = bytes.len();
+        for i in end..bytes.len() - 3 {
+            if &bytes[i..i + 4] == b"do()" {
+                start = i + 4; // Move past "do()"
+                break;
+            }
+        }
+
+        // If no more "do()", we are done
+        if start >= bytes.len() {
             break;
         }
     }
+
     sum
 }
 
