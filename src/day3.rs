@@ -1,15 +1,39 @@
-use regex::Regex;
-use std::sync::LazyLock;
-
-static R_1: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap());
-
 pub fn part1(input: &str) -> u64 {
     let mut sum = 0;
-    for caps in R_1.captures_iter(input) {
-        let a = caps[1].parse::<u64>().unwrap();
-        let b = caps[2].parse::<u64>().unwrap();
-        let result = a * b;
-        sum += result;
+    let bytes = input.as_bytes();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if bytes.get(i..i + 4) == Some(b"mul(") {
+            i += 4;
+            let mut a = 0;
+            while let Some(&b) = bytes.get(i) {
+                if b.is_ascii_digit() {
+                    a = a * 10 + (b - b'0') as u64;
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+            if bytes.get(i) == Some(&b',') {
+                i += 1;
+                let mut b = 0;
+                while let Some(&c) = bytes.get(i) {
+                    if c.is_ascii_digit() {
+                        b = b * 10 + (c - b'0') as u64;
+                        i += 1;
+                    } else {
+                        break;
+                    }
+                }
+                if bytes.get(i) == Some(&b')') {
+                    i += 1;
+                    sum += a * b;
+                }
+            }
+        } else {
+            i += 1;
+        }
     }
     sum
 }
