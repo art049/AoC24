@@ -18,29 +18,22 @@ unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Op
         let matches = _mm_cmpeq_epi8(chunk, first_byte);
         let mask = _mm_movemask_epi8(matches);
 
-        // Process all matches in this chunk
-        if mask != 0 {
-            let mut match_mask = mask;
-            while match_mask != 0 {
-                let offset = match_mask.trailing_zeros() as usize;
+        // Check each possible match directly
+        for offset in 0..16 {
+            if (mask & (1 << offset)) != 0 {
                 let pos = i + offset;
-
-                // Check full pattern match
                 if pos + pattern_len <= haystack_len
                     && haystack[pos..pos + pattern_len] == pattern[..]
                 {
                     return Some(pos);
                 }
-
-                // Clear the matched bit
-                match_mask &= match_mask - 1;
             }
         }
 
         i += 16;
     }
 
-    // Process the tail using smaller SIMD chunks or scalar
+    // Process the tail
     while i + pattern_len <= haystack_len {
         if &haystack[i..i + pattern_len] == pattern {
             return Some(i);
