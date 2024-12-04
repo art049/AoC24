@@ -1,61 +1,83 @@
+use std::simd::{cmp::SimdPartialEq, u32x8};
+
 pub fn part1(input: &str) -> u64 {
     let lines: Vec<&str> = input.lines().collect();
     let grid_height = lines.len();
     let grid_width = lines.iter().map(|line| line.len()).max().unwrap_or(0);
 
-    let mut grid = vec![vec!['.'; grid_width]; grid_height];
+    // Map characters to integers: '.' -> 0, 'X' -> 1, 'M' -> 2, 'A' -> 3, 'S' -> 4
+    let mut grid = vec![vec![0u8; grid_width + 3]; grid_height + 3]; // Pad grid to avoid bounds checking
+    let char_to_int = |c| match c {
+        'X' => 1,
+        'M' => 2,
+        'A' => 3,
+        'S' => 4,
+        _ => 0,
+    };
 
     for (y, line) in lines.iter().enumerate() {
         for (x, c) in line.chars().enumerate() {
-            if c == 'X' || c == 'M' || c == 'A' || c == 'S' {
-                grid[y][x] = c;
-            }
+            grid[y][x] = char_to_int(c);
         }
     }
 
     let mut xmas_count = 0;
-    const DIRECTIONS: &[(isize, isize)] = &[
-        (1, 0),  // Right
-        (0, 1),  // Down
-        (1, 1),  // Down-Right
-        (-1, 1), // Down-Left
-    ];
+    let pattern = (1u32 << 24) | (2u32 << 16) | (3u32 << 8) | 4u32; // 'XMAS'
+    let rev_pattern = (4u32 << 24) | (3u32 << 16) | (2u32 << 8) | 1u32; // 'SAMX'
 
+    // Right Direction
     for y in 0..grid_height {
-        for x in 0..grid_width {
-            let c = grid[y][x];
-            if c == 'X' || c == 'S' {
-                let is_reversed = c == 'S';
-                for &(dx, dy) in DIRECTIONS.iter() {
-                    let mut matched = true;
-                    for i in 0..4 {
-                        let nx = x as isize + dx * i;
-                        let ny = y as isize + dy * i;
-                        if nx < 0
-                            || ny < 0
-                            || nx >= grid_width as isize
-                            || ny >= grid_height as isize
-                        {
-                            matched = false;
-                            break;
-                        }
-                        let expected_letter = if is_reversed {
-                            ['S', 'A', 'M', 'X'][i as usize]
-                        } else {
-                            ['X', 'M', 'A', 'S'][i as usize]
-                        };
-                        if grid[ny as usize][nx as usize] != expected_letter {
-                            matched = false;
-                            break;
-                        }
-                    }
-                    if matched {
-                        xmas_count += 1;
-                    }
-                }
+        let row = &grid[y];
+        for x in 0..=grid_width - 4 {
+            let vals = (row[x] as u32) << 24
+                | (row[x + 1] as u32) << 16
+                | (row[x + 2] as u32) << 8
+                | (row[x + 3] as u32);
+            if vals == pattern || vals == rev_pattern {
+                xmas_count += 1;
             }
         }
     }
+
+    // Down Direction
+    for x in 0..grid_width {
+        for y in 0..=grid_height - 4 {
+            let vals = (grid[y][x] as u32) << 24
+                | (grid[y + 1][x] as u32) << 16
+                | (grid[y + 2][x] as u32) << 8
+                | (grid[y + 3][x] as u32);
+            if vals == pattern || vals == rev_pattern {
+                xmas_count += 1;
+            }
+        }
+    }
+
+    // Down-Right Direction
+    for y in 0..=grid_height - 4 {
+        for x in 0..=grid_width - 4 {
+            let vals = (grid[y][x] as u32) << 24
+                | (grid[y + 1][x + 1] as u32) << 16
+                | (grid[y + 2][x + 2] as u32) << 8
+                | (grid[y + 3][x + 3] as u32);
+            if vals == pattern || vals == rev_pattern {
+                xmas_count += 1;
+            }
+        }
+    }
+
+    // Down-Left Direction
+    for y in 0..=grid_height - 4 {
+        for x in 3..grid_width {
+            let vals = (grid[y][x] as u32) << 24
+                | (grid[y + 1][x - 1] as u32) << 16
+                | (grid[y + 2][x - 2] as u32) << 8
+                | (grid[y + 3][x - 3] as u32);
+            if vals == pattern || vals == rev_pattern {
+                xmas_count += 1;
+            }
+        }
+    }
+
     xmas_count
 }
 

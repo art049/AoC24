@@ -1,3 +1,5 @@
+#![feature(portable_simd)]
+
 mod utils;
 
 pub mod day1;
