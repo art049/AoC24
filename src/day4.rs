@@ -71,41 +71,48 @@ pub fn part1(input: &str) -> u64 {
 }
 
 pub fn part2(input: &str) -> u64 {
-    let lines: Vec<&str> = input.lines().collect();
-    let grid_height = lines.len();
-    let grid_width = lines.iter().map(|line| line.len()).max().unwrap_or(0);
+    const GRID_SIZE: usize = 140;
+    const PATTERNS: [[(u8, isize, isize); 4]; 4] = [
+        [(b'M', -1, -1), (b'M', 1, -1), (b'S', -1, 1), (b'S', 1, 1)],
+        [(b'S', -1, -1), (b'S', 1, -1), (b'M', -1, 1), (b'M', 1, 1)],
+        [(b'S', -1, -1), (b'M', 1, -1), (b'S', -1, 1), (b'M', 1, 1)],
+        [(b'M', -1, -1), (b'S', 1, -1), (b'M', -1, 1), (b'S', 1, 1)],
+    ];
+    // Fixed-size grid
+    let mut grid = [b'.'; GRID_SIZE * GRID_SIZE];
+    let mut grid_width = 0;
+    let mut grid_height = 0;
 
-    let mut grid = vec![vec!['.'; grid_width]; grid_height];
-
-    for (y, line) in lines.iter().enumerate() {
-        for (x, c) in line.chars().enumerate() {
-            if c == 'M' || c == 'A' || c == 'S' {
-                grid[y][x] = c;
-            }
+    // Populate the grid
+    for (y, line) in input.lines().enumerate() {
+        grid_height = y + 1;
+        for (x, byte) in line.as_bytes().iter().enumerate() {
+            grid[y * GRID_SIZE + x] = *byte;
+            grid_width = grid_width.max(x + 1);
         }
     }
 
     let mut xmas_count = 0;
-    let patterns = [
-        [('M', -1, -1), ('M', 1, -1), ('S', -1, 1), ('S', 1, 1)],
-        [('S', -1, -1), ('S', 1, -1), ('M', -1, 1), ('M', 1, 1)],
-        [('S', -1, -1), ('M', 1, -1), ('S', -1, 1), ('M', 1, 1)],
-        [('M', -1, -1), ('S', 1, -1), ('M', -1, 1), ('S', 1, 1)],
-    ];
 
     for y in 1..grid_height - 1 {
         for x in 1..grid_width - 1 {
-            if grid[y][x] == 'A' {
-                for pattern in patterns.iter() {
+            let idx = y * GRID_SIZE + x;
+            if grid[idx] == b'A' {
+                for pattern in PATTERNS.iter() {
                     let mut matched = true;
-                    for &(expected_c, dx, dy) in pattern.iter() {
-                        let nx = (x as isize + dx) as usize;
-                        let ny = (y as isize + dy) as usize;
-                        if grid[ny][nx] != expected_c {
+
+                    for (expected_c, dx, dy) in pattern {
+                        let nx = x.wrapping_add(*dx as usize);
+                        let ny = y.wrapping_add(*dy as usize);
+                        if nx >= GRID_SIZE
+                            || ny >= GRID_SIZE
+                            || grid[ny * GRID_SIZE + nx] != *expected_c
+                        {
                             matched = false;
                             break;
                         }
                     }
+
                     if matched {
                         xmas_count += 1;
                         break;
