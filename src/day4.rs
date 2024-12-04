@@ -1,120 +1,109 @@
-struct Pattern {
-    points: [(isize, isize); 4],
-}
-
-const PATTERNS: [Pattern; 4] = [
-    // XMAS
-    Pattern {
-        // XMAS horizontal
-        points: [(0, 0), (0, 1), (0, 2), (0, 3)],
-    },
-    Pattern {
-        // XMAS vertical
-        points: [(0, 0), (1, 0), (2, 0), (3, 0)],
-    },
-    Pattern {
-        // XMAS diagonal to bottom right
-        points: [(0, 0), (1, 1), (2, 2), (3, 3)],
-    },
-    Pattern {
-        // XMAS diagonal to bottom up
-        points: [(0, 0), (-1, 1), (-2, 2), (-3, 3)],
-    },
-];
-const GRID_SIZE: usize = 140;
 pub fn part1(input: &str) -> u64 {
-    let mut grid = ['.'; GRID_SIZE * GRID_SIZE];
-    let mut start_pos = [None; GRID_SIZE * GRID_SIZE];
-    let mut start_pos_iter = start_pos.iter_mut();
+    let lines: Vec<&str> = input.lines().collect();
+    let grid_height = lines.len();
+    let grid_width = lines.iter().map(|line| line.len()).max().unwrap_or(0);
 
-    input.lines().enumerate().for_each(|(y, line)| {
-        let line_offset = y * GRID_SIZE;
-        line.chars().enumerate().for_each(|(x, c)| {
-            let i = line_offset + x;
+    let mut grid = vec![vec!['.'; grid_width]; grid_height];
+
+    for (y, line) in lines.iter().enumerate() {
+        for (x, c) in line.chars().enumerate() {
             if c == 'X' || c == 'M' || c == 'A' || c == 'S' {
-                grid[i] = c;
+                grid[y][x] = c;
             }
-            if c == 'X' || c == 'S' {
-                start_pos_iter.next().unwrap().replace((x, y, c));
-            }
-        });
-    });
-    let mut start_pos_iter = start_pos.iter();
+        }
+    }
+
     let mut xmas_count = 0;
-    while let Some(Some((x, y, c))) = start_pos_iter.next() {
-        let is_reversed = *c == 'S';
-        for pattern in PATTERNS.iter() {
-            let mut found = true;
-            for (i, (dx, dy)) in pattern.points.iter().enumerate() {
-                let x = x.checked_add_signed(*dx);
-                let y = y.checked_add_signed(*dy);
-                let (Some(x), Some(y)) = (x, y) else {
-                    found = false;
-                    break;
-                };
-                if x >= GRID_SIZE || y >= GRID_SIZE {
-                    found = false;
-                    break;
+    const DIRECTIONS: &[(isize, isize)] = &[
+        (1, 0),  // Right
+        (0, 1),  // Down
+        (1, 1),  // Down-Right
+        (-1, 1), // Down-Left
+    ];
+
+    for y in 0..grid_height {
+        for x in 0..grid_width {
+            let c = grid[y][x];
+            if c == 'X' || c == 'S' {
+                let is_reversed = c == 'S';
+                for &(dx, dy) in DIRECTIONS.iter() {
+                    let mut matched = true;
+                    for i in 0..4 {
+                        let nx = x as isize + dx * i;
+                        let ny = y as isize + dy * i;
+                        if nx < 0
+                            || ny < 0
+                            || nx >= grid_width as isize
+                            || ny >= grid_height as isize
+                        {
+                            matched = false;
+                            break;
+                        }
+                        let expected_letter = if is_reversed {
+                            ['S', 'A', 'M', 'X'][i as usize]
+                        } else {
+                            ['X', 'M', 'A', 'S'][i as usize]
+                        };
+                        if grid[ny as usize][nx as usize] != expected_letter {
+                            matched = false;
+                            break;
+                        }
+                    }
+                    if matched {
+                        xmas_count += 1;
+                    }
                 }
-                let expected_letter = ['X', 'M', 'A', 'S'][if is_reversed { 3 - i } else { i }];
-                if grid[y * GRID_SIZE + x] != expected_letter {
-                    found = false;
-                    break;
-                }
-            }
-            if found {
-                xmas_count += 1;
             }
         }
     }
     xmas_count
 }
 
-macro_rules! check {
-    ($grid:ident, $x:expr, $y:expr, $c:expr) => {
-        $grid[$y * GRID_SIZE + $x] == $c
-    };
-}
 pub fn part2(input: &str) -> u64 {
-    let mut grid = ['.'; GRID_SIZE * GRID_SIZE];
-    let mut start_pos = [None; GRID_SIZE * GRID_SIZE];
-    let mut start_pos_iter = start_pos.iter_mut();
+    let lines: Vec<&str> = input.lines().collect();
+    let grid_height = lines.len();
+    let grid_width = lines.iter().map(|line| line.len()).max().unwrap_or(0);
 
-    input.lines().enumerate().for_each(|(y, line)| {
-        let line_offset = y * GRID_SIZE;
-        line.chars().enumerate().for_each(|(x, c)| {
-            let i = line_offset + x;
+    let mut grid = vec![vec!['.'; grid_width]; grid_height];
+
+    for (y, line) in lines.iter().enumerate() {
+        for (x, c) in line.chars().enumerate() {
             if c == 'M' || c == 'A' || c == 'S' {
-                grid[i] = c;
+                grid[y][x] = c;
             }
-            if c == 'A' && x > 0 && y > 0 && x < GRID_SIZE - 1 && y < GRID_SIZE - 1 {
-                start_pos_iter.next().unwrap().replace((x, y, c));
-            }
-        });
-    });
-    let mut start_pos_iter = start_pos.iter();
-    let mut xmas_count = 0;
-    while let Some(Some((x, y, c))) = start_pos_iter.next() {
-        if (check!(grid, x - 1, y - 1, 'M')
-            && check!(grid, x + 1, y - 1, 'M')
-            && check!(grid, x - 1, y + 1, 'S')
-            && check!(grid, x + 1, y + 1, 'S'))
-            || (check!(grid, x - 1, y - 1, 'S')
-                && check!(grid, x + 1, y - 1, 'S')
-                && check!(grid, x - 1, y + 1, 'M')
-                && check!(grid, x + 1, y + 1, 'M'))
-            || (check!(grid, x - 1, y - 1, 'S')
-                && check!(grid, x + 1, y - 1, 'M')
-                && check!(grid, x - 1, y + 1, 'S')
-                && check!(grid, x + 1, y + 1, 'M'))
-            || (check!(grid, x - 1, y - 1, 'M')
-                && check!(grid, x + 1, y - 1, 'S')
-                && check!(grid, x - 1, y + 1, 'M')
-                && check!(grid, x + 1, y + 1, 'S'))
-        {
-            xmas_count += 1;
         }
     }
+
+    let mut xmas_count = 0;
+    let patterns = [
+        [('M', -1, -1), ('M', 1, -1), ('S', -1, 1), ('S', 1, 1)],
+        [('S', -1, -1), ('S', 1, -1), ('M', -1, 1), ('M', 1, 1)],
+        [('S', -1, -1), ('M', 1, -1), ('S', -1, 1), ('M', 1, 1)],
+        [('M', -1, -1), ('S', 1, -1), ('M', -1, 1), ('S', 1, 1)],
+    ];
+
+    for y in 1..grid_height - 1 {
+        for x in 1..grid_width - 1 {
+            if grid[y][x] == 'A' {
+                for pattern in patterns.iter() {
+                    let mut matched = true;
+                    for &(expected_c, dx, dy) in pattern.iter() {
+                        let nx = (x as isize + dx) as usize;
+                        let ny = (y as isize + dy) as usize;
+                        if grid[ny][nx] != expected_c {
+                            matched = false;
+                            break;
+                        }
+                    }
+                    if matched {
+                        xmas_count += 1;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     xmas_count
 }
 
