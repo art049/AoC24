@@ -1,33 +1,46 @@
 pub fn part1(input: &str) -> u64 {
-    let lines: Vec<&str> = input.lines().collect();
-    let grid_height = lines.len();
-    let grid_width = lines.iter().map(|line| line.len()).max().unwrap_or(0);
-
-    let mut grid = vec![vec!['.'; grid_width]; grid_height];
-
-    for (y, line) in lines.iter().enumerate() {
-        for (x, c) in line.chars().enumerate() {
-            if c == 'X' || c == 'M' || c == 'A' || c == 'S' {
-                grid[y][x] = c;
-            }
-        }
-    }
-
-    let mut xmas_count = 0;
+    const GRID_SIZE: usize = 140;
     const DIRECTIONS: &[(isize, isize)] = &[
         (1, 0),  // Right
         (0, 1),  // Down
         (1, 1),  // Down-Right
         (-1, 1), // Down-Left
     ];
+    const PATTERN: [u8; 4] = [b'X', b'M', b'A', b'S'];
+    const PATTERN_REVERSED: [u8; 4] = [b'S', b'A', b'M', b'X'];
 
+    // Fixed-size grid
+    let mut grid = [b'.'; GRID_SIZE * GRID_SIZE];
+    let mut grid_width = 0;
+    let mut grid_height = 0;
+
+    // Populate grid (assumes input lines are less than GRID_SIZE)
+    for (y, line) in input.lines().enumerate() {
+        grid_height = y + 1;
+        for (x, &byte) in line.as_bytes().iter().enumerate() {
+            grid[y * GRID_SIZE + x] = byte;
+            grid_width = grid_width.max(x + 1);
+        }
+    }
+
+    let mut xmas_count = 0;
+
+    // Main processing loop
     for y in 0..grid_height {
         for x in 0..grid_width {
-            let c = grid[y][x];
-            if c == 'X' || c == 'S' {
-                let is_reversed = c == 'S';
+            let idx = y * GRID_SIZE + x;
+            let cell = grid[idx];
+            if cell == b'X' || cell == b'S' {
+                let is_reversed = cell == b'S';
+                let pattern = if is_reversed {
+                    PATTERN_REVERSED
+                } else {
+                    PATTERN
+                };
+
                 for &(dx, dy) in DIRECTIONS.iter() {
                     let mut matched = true;
+
                     for i in 0..4 {
                         let nx = x as isize + dx * i;
                         let ny = y as isize + dy * i;
@@ -39,16 +52,13 @@ pub fn part1(input: &str) -> u64 {
                             matched = false;
                             break;
                         }
-                        let expected_letter = if is_reversed {
-                            ['S', 'A', 'M', 'X'][i as usize]
-                        } else {
-                            ['X', 'M', 'A', 'S'][i as usize]
-                        };
-                        if grid[ny as usize][nx as usize] != expected_letter {
+                        let nidx = (ny as usize) * GRID_SIZE + nx as usize;
+                        if grid[nidx] != pattern[i as usize] {
                             matched = false;
                             break;
                         }
                     }
+
                     if matched {
                         xmas_count += 1;
                     }
@@ -56,6 +66,7 @@ pub fn part1(input: &str) -> u64 {
             }
         }
     }
+
     xmas_count
 }
 
