@@ -8,42 +8,49 @@ unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Op
 
     let pattern_len = pattern.len();
     let haystack_len = haystack.len();
-
-    // Load the first byte of the pattern into a SIMD register
     let first_byte = _mm_set1_epi8(pattern[0] as i8);
+
+    // Load the pattern into a SIMD register (zero-padding the unused bytes)
+    let mut pattern_vec = _mm_setzero_si128();
+    std::ptr::copy_nonoverlapping(
+        pattern.as_ptr(),
+        &mut pattern_vec as *mut __m128i as *mut u8,
+        pattern_len,
+    );
 
     let mut i = start;
 
     while i + 16 <= haystack_len {
-        // Prefetch the next block of memory
-        _mm_prefetch(haystack.as_ptr().add(i + 64) as *const i8, _MM_HINT_T0);
-
         // Load the next 16 bytes of the haystack
         let chunk = _mm_loadu_si128(haystack.as_ptr().add(i) as *const __m128i);
-
-        // Compare the chunk with the first byte of the pattern
+        // Compare the first byte
         let matches = _mm_cmpeq_epi8(chunk, first_byte);
-
         // Extract matching positions
         let mut mask = _mm_movemask_epi8(matches);
 
-        // Process each match
         while mask != 0 {
             let offset = mask.trailing_zeros() as usize;
             let pos = i + offset;
 
-            // Vectorized slice comparison
-            if pos + pattern_len <= haystack_len && &haystack[pos..pos + pattern_len] == pattern {
-                return Some(pos);
+            // Compare the rest of the pattern
+            if pos + pattern_len <= haystack_len {
+                // Load the next 16 bytes of the haystack
+                let candidate = _mm_loadu_si128(haystack.as_ptr().add(pos) as *const __m128i);
+                // Compare the candidate with the pattern
+                let cmp = _mm_cmpeq_epi8(candidate, pattern_vec);
+                // Check if all bytes match
+                if _mm_movemask_epi8(cmp) & ((1 << pattern_len) - 1) == (1 << pattern_len) - 1 {
+                    return Some(pos);
+                }
             }
 
             mask &= mask - 1; // Clear the matched bit
         }
 
-        i += 16; // Move to the next chunk
+        i += 16;
     }
 
-    // Handle the remaining tail (less than 16 bytes)
+    // Scalar tail handling
     while i + pattern_len <= haystack_len {
         if &haystack[i..i + pattern_len] == pattern {
             return Some(i);
