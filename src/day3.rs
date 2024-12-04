@@ -12,36 +12,38 @@ unsafe fn find_pattern_simd(haystack: &[u8], start: usize, pattern: &[u8]) -> Op
     // Load the first byte of the pattern into a SIMD register
     let first_byte = _mm_set1_epi8(pattern[0] as i8);
 
-    // Iterate over the haystack in chunks of 16 bytes
     let mut i = start;
+
     while i + 16 <= haystack_len {
+        // Prefetch the next block of memory
+        _mm_prefetch(haystack.as_ptr().add(i + 64) as *const i8, _MM_HINT_T0);
+
+        // Load the next 16 bytes of the haystack
         let chunk = _mm_loadu_si128(haystack.as_ptr().add(i) as *const __m128i);
 
         // Compare the chunk with the first byte of the pattern
         let matches = _mm_cmpeq_epi8(chunk, first_byte);
 
-        // Create a mask of matched positions
-        let mask = _mm_movemask_epi8(matches);
+        // Extract matching positions
+        let mut mask = _mm_movemask_epi8(matches);
 
-        // Check each matching position
-        if mask != 0 {
-            for offset in 0..16 {
-                if mask & (1 << offset) != 0 {
-                    // Check the rest of the pattern
-                    let pos = i + offset;
-                    if pos + pattern_len <= haystack_len
-                        && &haystack[pos..pos + pattern_len] == pattern
-                    {
-                        return Some(pos);
-                    }
-                }
+        // Process each match
+        while mask != 0 {
+            let offset = mask.trailing_zeros() as usize;
+            let pos = i + offset;
+
+            // Vectorized slice comparison
+            if pos + pattern_len <= haystack_len && &haystack[pos..pos + pattern_len] == pattern {
+                return Some(pos);
             }
+
+            mask &= mask - 1; // Clear the matched bit
         }
 
-        i += 16;
+        i += 16; // Move to the next chunk
     }
 
-    // Handle the tail of the haystack
+    // Handle the remaining tail (less than 16 bytes)
     while i + pattern_len <= haystack_len {
         if &haystack[i..i + pattern_len] == pattern {
             return Some(i);
