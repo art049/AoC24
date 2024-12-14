@@ -1,42 +1,67 @@
 pub fn part1(input: &str) -> i64 {
     let mut buttons = vec![];
-    let mut lines = input.lines().filter(|line| !line.trim().is_empty());
-    while let Some(line_a) = lines.next() {
-        let line_b = lines.next().unwrap();
-        let line_prize = lines.next().unwrap();
-        let a_values: Vec<_> = line_a
-            .split(':')
-            .nth(1)
-            .unwrap()
-            .trim()
-            .split(',')
-            .map(|part| part.trim())
-            .collect();
-        let a_x: i64 = a_values[0][2..].parse().unwrap();
-        let a_y: i64 = a_values[1][2..].parse().unwrap();
-        let b_values: Vec<_> = line_b
-            .split(':')
-            .nth(1)
-            .unwrap()
-            .trim()
-            .split(',')
-            .map(|part| part.trim())
-            .collect();
-        let b_x: i64 = b_values[0][2..].parse().unwrap();
-        let b_y: i64 = b_values[1][2..].parse().unwrap();
-        let prize_values: Vec<_> = line_prize
-            .split(':')
-            .nth(1)
-            .unwrap()
-            .trim()
-            .split(',')
-            .map(|part| part.trim())
-            .collect();
-        let prize_x: i64 = prize_values[0][2..].parse().unwrap();
-        let prize_y: i64 = prize_values[1][2..].parse().unwrap();
+    let input_bytes = input.as_bytes();
+    let input_len = input.len();
+    let mut i = 0;
 
-        buttons.push(((a_x, a_y), (b_x, b_y), (prize_x, prize_y)));
+    fn parse_int(slice: &[u8]) -> i64 {
+        let mut value = 0i64;
+        let mut negative = false;
+        let mut start = 0;
+        if slice[0] == b'-' {
+            negative = true;
+            start = 1;
+        }
+        for &byte in &slice[start..] {
+            value = value * 10 + (byte - b'0') as i64;
+        }
+        if negative {
+            -value
+        } else {
+            value
+        }
     }
+
+    while i < input_len {
+        let (a_x, a_y) = {
+            i += "Button A: X+".len();
+            let a_x_end = i + input_bytes[i..].iter().position(|&b| b == b',').unwrap();
+            let a_x = parse_int(&input_bytes[i..a_x_end]);
+            i = a_x_end + ", Y+".len();
+            let a_y_end = i + input_bytes[i..].iter().position(|&b| b == b'\n').unwrap();
+            let a_y = parse_int(&input_bytes[i..a_y_end]);
+            i = a_y_end + 1;
+            (a_x, a_y)
+        };
+
+        let (b_x, b_y) = {
+            i += "Button B: X+".len();
+            let b_x_end = i + input_bytes[i..].iter().position(|&b| b == b',').unwrap();
+            let b_x = parse_int(&input_bytes[i..b_x_end]);
+            i = b_x_end + ", Y+".len();
+            let b_y_end = i + input_bytes[i..].iter().position(|&b| b == b'\n').unwrap();
+            let b_y = parse_int(&input_bytes[i..b_y_end]);
+            i = b_y_end + 1;
+            (b_x, b_y)
+        };
+
+        let (prize_x, prize_y) = {
+            i += "Prize: X=".len();
+            let prize_x_end = i + input_bytes[i..].iter().position(|&b| b == b',').unwrap();
+            let prize_x = parse_int(&input_bytes[i..prize_x_end]);
+            i = prize_x_end + ", Y=".len();
+            let prize_y_end = i + input_bytes[i..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .unwrap_or(input_len - i);
+            let prize_y = parse_int(&input_bytes[i..prize_y_end]);
+            i = prize_y_end + 1;
+            (prize_x, prize_y)
+        };
+        buttons.push(((a_x, a_y), (b_x, b_y), (prize_x, prize_y)));
+        i += 1;
+    }
+
     let mut spent = 0;
     for ((a_x, a_y), (b_x, b_y), (prize_x, prize_y)) in buttons {
         let det = (a_x * b_y) - (b_x * a_y);
@@ -58,44 +83,73 @@ pub fn part1(input: &str) -> i64 {
 
 pub fn part2(input: &str) -> i64 {
     let mut buttons = vec![];
-    let mut lines = input.lines().filter(|line| !line.trim().is_empty());
-    while let Some(line_a) = lines.next() {
-        let line_b = lines.next().unwrap();
-        let line_prize = lines.next().unwrap();
-        let a_values: Vec<_> = line_a
-            .split(':')
-            .nth(1)
-            .unwrap()
-            .trim()
-            .split(',')
-            .map(|part| part.trim())
-            .collect();
-        let a_x: i64 = a_values[0][2..].parse().unwrap();
-        let a_y: i64 = a_values[1][2..].parse().unwrap();
-        let b_values: Vec<_> = line_b
-            .split(':')
-            .nth(1)
-            .unwrap()
-            .trim()
-            .split(',')
-            .map(|part| part.trim())
-            .collect();
-        let b_x: i64 = b_values[0][2..].parse().unwrap();
-        let b_y: i64 = b_values[1][2..].parse().unwrap();
-        let prize_values: Vec<_> = line_prize
-            .split(':')
-            .nth(1)
-            .unwrap()
-            .trim()
-            .split(',')
-            .map(|part| part.trim())
-            .collect();
-        const PRIZE_D: i64 = 10000000000000;
-        let prize_x: i64 = prize_values[0][2..].parse::<i64>().unwrap() + PRIZE_D;
-        let prize_y: i64 = prize_values[1][2..].parse::<i64>().unwrap() + PRIZE_D;
+    let input_bytes = input.as_bytes();
+    let input_len = input.len();
+    let mut i = 0;
 
-        buttons.push(((a_x, a_y), (b_x, b_y), (prize_x, prize_y)));
+    fn parse_int(slice: &[u8]) -> i64 {
+        let mut value = 0i64;
+        let mut negative = false;
+        let mut start = 0;
+        if slice[0] == b'-' {
+            negative = true;
+            start = 1;
+        }
+        for &byte in &slice[start..] {
+            value = value * 10 + (byte - b'0') as i64;
+        }
+        if negative {
+            -value
+        } else {
+            value
+        }
     }
+
+    while i < input_len {
+        let (a_x, a_y) = {
+            i += "Button A: X+".len();
+            let a_x_end = i + input_bytes[i..].iter().position(|&b| b == b',').unwrap();
+            let a_x = parse_int(&input_bytes[i..a_x_end]);
+            i = a_x_end + ", Y+".len();
+            let a_y_end = i + input_bytes[i..].iter().position(|&b| b == b'\n').unwrap();
+            let a_y = parse_int(&input_bytes[i..a_y_end]);
+            i = a_y_end + 1;
+            (a_x, a_y)
+        };
+
+        let (b_x, b_y) = {
+            i += "Button B: X+".len();
+            let b_x_end = i + input_bytes[i..].iter().position(|&b| b == b',').unwrap();
+            let b_x = parse_int(&input_bytes[i..b_x_end]);
+            i = b_x_end + ", Y+".len();
+            let b_y_end = i + input_bytes[i..].iter().position(|&b| b == b'\n').unwrap();
+            let b_y = parse_int(&input_bytes[i..b_y_end]);
+            i = b_y_end + 1;
+            (b_x, b_y)
+        };
+
+        let (prize_x, prize_y) = {
+            i += "Prize: X=".len();
+            let prize_x_end = i + input_bytes[i..].iter().position(|&b| b == b',').unwrap();
+            let prize_x = parse_int(&input_bytes[i..prize_x_end]);
+            i = prize_x_end + ", Y=".len();
+            let prize_y_end = i + input_bytes[i..]
+                .iter()
+                .position(|&b| b == b'\n')
+                .unwrap_or(input_len - i);
+            let prize_y = parse_int(&input_bytes[i..prize_y_end]);
+            i = prize_y_end + 1;
+            (prize_x, prize_y)
+        };
+
+        const PRIZE_D: i64 = 10000000000000;
+        let adjusted_prize_x = prize_x + PRIZE_D;
+        let adjusted_prize_y = prize_y + PRIZE_D;
+
+        buttons.push(((a_x, a_y), (b_x, b_y), (adjusted_prize_x, adjusted_prize_y)));
+        i += 1;
+    }
+
     let mut spent = 0;
     for ((a_x, a_y), (b_x, b_y), (prize_x, prize_y)) in buttons {
         let det = (a_x * b_y) - (b_x * a_y);
