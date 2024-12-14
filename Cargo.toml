@@ -6,6 +6,7 @@ authors = ["Arthur Pastel <arthur@codspeed.io>"]
 
 
 [dependencies]
+arrayvec = "0.7.6"
 regex = "1.11.1"
 
 [dev-dependencies]

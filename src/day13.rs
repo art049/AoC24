@@ -1,5 +1,7 @@
+use arrayvec::ArrayVec;
+
 pub fn part1(input: &str) -> i64 {
-    let mut buttons = vec![];
+    let mut buttons = ArrayVec::<_, 512>::new();
     let input_bytes = input.as_bytes();
     let input_len = input.len();
     let mut i = 0;
@@ -82,7 +84,7 @@ pub fn part1(input: &str) -> i64 {
 }
 
 pub fn part2(input: &str) -> i64 {
-    let mut buttons = vec![];
+    let mut buttons = ArrayVec::<_, 512>::new();
     let input_bytes = input.as_bytes();
     let input_len = input.len();
     let mut i = 0;
