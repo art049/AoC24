@@ -3,11 +3,11 @@ use std::cmp::Ordering;
 use arrayvec::ArrayVec;
 use memchr::memchr;
 
-type Num = i32;
+type Num = u32;
 const N_ROBOT: usize = 500;
 
 #[inline(always)]
-unsafe fn parse_int(slice: &[u8]) -> Num {
+unsafe fn parse_int(slice: &[u8], mod_: Num) -> Num {
     let mut value = 0 as Num;
     let negative = *slice.get_unchecked(0) == b'-';
     let start = if negative { 1 } else { 0 };
@@ -17,7 +17,7 @@ unsafe fn parse_int(slice: &[u8]) -> Num {
             .unchecked_add(byte.unchecked_sub(b'0') as Num);
     }
     if negative {
-        -value
+        mod_ - value
     } else {
         value
     }
@@ -38,18 +38,18 @@ unsafe fn part1_inner(input: &str, width: Num, height: Num) -> Num {
     while i < input_len {
         i += 2; // skip "p="
         let p_x_end = i + memchr(b',', &input_bytes[i..]).unwrap_unchecked();
-        let p_x = parse_int(&input_bytes[i..p_x_end]);
+        let p_x = parse_int(&input_bytes[i..p_x_end], width);
         i = p_x_end + 1; // skip ','
         let p_y_end = i + memchr(b' ', &input_bytes[i..]).unwrap_unchecked();
-        let p_y = parse_int(&input_bytes[i..p_y_end]);
+        let p_y = parse_int(&input_bytes[i..p_y_end], height);
         i = p_y_end + 1; // skip ' '
 
         i += 2; // skip "v="
         let v_x_end = i + memchr(b',', &input_bytes[i..]).unwrap_unchecked();
-        let v_x = parse_int(&input_bytes[i..v_x_end]);
+        let v_x = parse_int(&input_bytes[i..v_x_end], width);
         i = v_x_end + 1; // skip ','
         let v_y_end = i + memchr(b'\n', &input_bytes[i..]).unwrap_unchecked();
-        let v_y = parse_int(&input_bytes[i..v_y_end]);
+        let v_y = parse_int(&input_bytes[i..v_y_end], height);
         i = v_y_end + 1; // skip '\n'
         const STEPS: Num = 100;
         let final_pos_x = (p_x + v_x * STEPS).wrapping_rem_euclid(width);
@@ -101,18 +101,18 @@ unsafe fn part2_inner(input: &str) -> Num {
     while i < input_len {
         i += 2; // skip "p="
         let p_x_end = i + memchr(b',', &input_bytes[i..]).unwrap_unchecked();
-        let p_x = parse_int(&input_bytes[i..p_x_end]);
+        let p_x = parse_int(&input_bytes[i..p_x_end], WIDTH);
         i = p_x_end + 1; // skip ','
         let p_y_end = i + memchr(b' ', &input_bytes[i..]).unwrap_unchecked();
-        let p_y = parse_int(&input_bytes[i..p_y_end]);
+        let p_y = parse_int(&input_bytes[i..p_y_end], HEIGHT);
         i = p_y_end + 1; // skip ' '
 
         i += 2; // skip "v="
         let v_x_end = i + memchr(b',', &input_bytes[i..]).unwrap_unchecked();
-        let v_x = parse_int(&input_bytes[i..v_x_end]);
+        let v_x = parse_int(&input_bytes[i..v_x_end], WIDTH);
         i = v_x_end + 1; // skip ','
         let v_y_end = i + memchr(b'\n', &input_bytes[i..]).unwrap_unchecked();
-        let v_y = parse_int(&input_bytes[i..v_y_end]);
+        let v_y = parse_int(&input_bytes[i..v_y_end], HEIGHT);
         i = v_y_end + 1; // skip '\n'
 
         robots.push_unchecked(Robot {
@@ -179,10 +179,11 @@ unsafe fn part2_inner(input: &str) -> Num {
         }
     }
     most_clustered_x_iteration.unchecked_add(
-        ((INV_MOD
-            .unchecked_mul(most_clustered_y_iteration.unchecked_sub(most_clustered_x_iteration)))
-        .wrapping_rem_euclid(HEIGHT))
-        .unchecked_mul(WIDTH),
+        (((INV_MOD as i32).unchecked_mul(
+            (most_clustered_y_iteration as i32).unchecked_sub(most_clustered_x_iteration as i32),
+        ))
+        .wrapping_rem_euclid(HEIGHT as i32) as Num)
+            .unchecked_mul(WIDTH),
     )
 }
 
