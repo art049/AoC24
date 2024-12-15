@@ -133,7 +133,7 @@ unsafe fn part2_inner(input: &str) -> Num {
     }
     let mut i = 0;
     loop {
-        let mut counts = vec![0; WIDTH as usize];
+        let mut counts = [0; WIDTH as usize];
         for &pos in &positions {
             counts[pos as usize] += 1;
         }
@@ -161,7 +161,7 @@ unsafe fn part2_inner(input: &str) -> Num {
     let mut most_clustered_y_iteration = 0;
     let mut i = 0;
     loop {
-        let mut counts = vec![0; HEIGHT as usize];
+        let mut counts = [0; HEIGHT as usize];
         for &pos in &positions {
             counts[pos as usize] += 1;
         }
