@@ -30,6 +30,7 @@ dependencies = [
  "arrayvec",
  "codspeed-criterion-compat",
  "indoc",
+ "memchr",
  "paste",
  "regex",
 ]
