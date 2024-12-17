@@ -1,11 +1,12 @@
+use std::sync::LazyLock;
+
 use regex::Regex;
+
+static R: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap());
 
 pub fn part1(input: &str) -> u64 {
     let mut sum = 0;
-    for caps in Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)")
-        .unwrap()
-        .captures_iter(input)
-    {
+    for caps in R.captures_iter(input) {
         let a = caps[1].parse::<u64>().unwrap();
         let b = caps[2].parse::<u64>().unwrap();
         let result = a * b;
