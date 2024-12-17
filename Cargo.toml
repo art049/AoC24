@@ -5,19 +5,15 @@ edition = "2021"
 authors = ["Arthur Pastel <arthur@codspeed.io>"]
 
 
-[dependencies]
-arrayvec = "0.7.6"
-memchr = "2.7.4"
-regex = "1.11.1"
-
 [dev-dependencies]
 criterion = { version = "2.7.2", package = "codspeed-criterion-compat", default-features = false }
 indoc = "2.0.5"
 paste = "1.0.15"
 
-[profile.release]
-debug = true
 
 [[bench]]
 name = "bench_days"
 harness = false
+
+[dependencies]
+regex = "1.11.1"
