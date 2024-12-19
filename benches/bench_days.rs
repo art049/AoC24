@@ -16,9 +16,18 @@ macro_rules! benches_day {
 
             pub fn [<bench_day $day_num>](c: &mut Criterion) {
                 let mut group = c.benchmark_group(concat!("day", $day_num));
+                let input = include_str!("./input.txt");
+                #[inline(never)]
+                fn routine1(input: &str) -> impl Output + '_ {
+                    [<day $day_num>]::part1(black_box(input))
+                }
+                #[inline(never)]
+                fn routine2(input: &str) -> impl Output + '_ {
+                    [<day $day_num>]::part2(black_box(input))
+                }
                 let input = get_day_input!($day_num);
-                group.bench_function(format!("day{}_part1", $day_num), |b| b.iter(|| [<day $day_num>]::part1(input)));
-                group.bench_function(format!("day{}_part2", $day_num), |b| b.iter(|| [<day $day_num>]::part2(input)));
+                group.bench_with_input(format!("day{}_part1", $day_num), input, |b, i| b.iter(|| routine1(i)));
+                group.bench_with_input(format!("day{}_part2", $day_num), input, |b, i| b.iter(|| routine2(i)));
             }
         }
     };
